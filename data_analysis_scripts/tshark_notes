@@ -1,0 +1,6 @@
+#### RADIO TAP #####
+# to use with pcap captured in monitor mode
+## FRAME TIME - DATA RATE
+tshark -r monitor.pcap -Tfields -t e -e _ws.col.Time -e radiotap.datarate
+## FRAME TIME - IS A RETRANSMISSION (MAC LAYER)
+tshark -r monitor.pcap -Tfields -t e -e _ws.col.Time -e wlan.fc.retry
