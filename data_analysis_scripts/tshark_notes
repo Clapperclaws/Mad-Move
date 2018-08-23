@@ -1,6 +1,10 @@
 #### RADIO TAP #####
 # to use with pcap captured in monitor mode
 ## FRAME TIME - DATA RATE
-tshark -r monitor.pcap -Tfields -t e -e _ws.col.Time -e radiotap.datarate
+tshark -r monitor.pcap -Y 'wlan.da == 64:80:99:8c:61:a8 && wlan.fc.type == 2' -Tfields -t e -e _ws.col.Time -e radiotap.datarate
 ## FRAME TIME - IS A RETRANSMISSION (MAC LAYER)
-tshark -r monitor.pcap -Tfields -t e -e _ws.col.Time -e wlan.fc.retry
+tshark -r monitor.pcap -Y 'wlan.da == 64:80:99:8c:61:a8 && wlan.fc.type == 2' -Tfields -t e -e _ws.col.Time -e wlan.fc.retry
+##FRAME TIME - MAC SEQUENCE NUMBER
+tshark -r monitor.pcap -Y 'wlan.da == 64:80:99:8c:61:a8 && wlan.fc.type == 2' -Tfields -t e -e _ws.col.Time -e wlan.seq
+
+
