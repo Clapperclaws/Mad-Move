@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Dash.js Rocks haha</title>
+    </head>
+    <body onload = "init();">
+        <div>
+            <video id="videoPlayer" controls="true"></video>
+        </div>
+         <div id="log"></div>
+         <button id="fetch_lte_info" type="button" onclick="myFunction()">Get LTE Historical</button>
+	<script src="dash.all.min.js"></script>
+        <script>
+            var player;
+            var ws;
+    
+            (function(){
+                var url = "http://35.180.63.62:8080/ftp-itec.uni-klu.ac.at/pub/datasets/DASHDataset2014/BigBuckBunny/4sec/BigBuckBunny_4s_onDemand_2014_05_09.mpd";
+                player = dashjs.MediaPlayer().create()
+
+                var abr_algorithms = {0: 'Default', 1: 'Fixed Rate (0)', 2: 'Buffer Based', 3: 'Rate Based', 4: 'RL', 5: 'Festive', 6: 'Bola'};
+                var abr_id = 2;
+
+                if ( abr_id > 1 && abr_id != 6 ) {
+                    player.enablerlABR(true);
+                }
+
+                // uncomment this block if you want to change the buffer size that dash tries to maintain
+                player.setBufferTimeAtTopQuality(60);
+                player.setStableBufferTime(60);
+                player.setBufferToKeep(60);
+                player.setBufferPruningInterval(60);
+
+                player.initialize(document.querySelector("#videoPlayer"), url, true);
+
+                if ( abr_id == 6 ) { //BOLA
+                    player.enableBufferOccupancyABR(true);
+                }
+                player.setAbrAlgorithm(abr_id);
+
+                if ( abr_id in abr_algorithms ) {
+                    document.title = abr_algorithms[abr_id];
+                } else {
+                    document.title = "Unknown ABR Algorithm";
+                }
+            })();
+
+            function myFunction(){
+               ws.send("lte_request")
+            }
+
+            function init() {
+
+              // Connect to Web Socket
+              ws = new WebSocket("ws://localhost:9001/");
+
+              // Set event handlers.
+              ws.onopen = function() {
+                output("onopen");
+              };
+
+              ws.onmessage = function(e) {
+                // e.data contains received string.
+                output("onmessage: " + e.data);
+                if(e.data.includes("buffer")){
+                    ws.send(player.getBufferLength('video'));
+                }
+                if(e.data.includes("lte")){
+                    output(e.data);
+                }
+                // onSubmit()
+              };
+                    ws.onclose = function() {
+                output("onclose");
+              };
+
+              ws.onerror = function(e) {
+                output("onerror");
+                console.log(e)
+              };
+
+            }
+
+            function onCloseClick() {
+              ws.close();
+            }
+
+            function output(str) {
+              var log = document.getElementById("log");
+              var escaped = str.replace(/&/, "&amp;").replace(/</, "&lt;").
+                replace(/>/, "&gt;").replace(/"/, "&quot;"); // "
+              log.innerHTML = escaped + "<br>" + log.innerHTML;
+            }
+
+        </script>
+    </body>
+</html>
