@@ -2,7 +2,6 @@ from websocket_server import WebsocketServer
 
 clients = {}
 
-
 def client_left(client, server):
     msg = "Client (%s) left" % client['id']
     print (msg)
@@ -23,13 +22,20 @@ def new_client(client, server):
 
 
 def msg_received(client, server, msg):
+    last_lte_info = "some value"
     msg = "Client (%s) : %s" % (client['id'], msg)
     print (msg)
-    clientid = client['id']
-    for cl in clients:
-        if cl != clientid:
-            cl = clients[cl]
-            server.send_message(cl, msg)
+    if("buffer" in msg):
+        clientid = client['id']
+        for cl in clients:
+            if cl != clientid:
+                cl = clients[cl]
+                server.send_message(cl, msg)
+    if("lte_request" in msg):
+        clientid = client['id']
+        server.send_message(clients[clientid], last_lte_info)
+    if ("lte_response" in msg):
+        last_lte_info = msg.split(":")[1]
 
 
 server = WebsocketServer(9001)

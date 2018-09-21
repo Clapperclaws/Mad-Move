@@ -23,10 +23,14 @@ class mp_dash:
 
     #MP-DASH function to enable/disable cellular sub-flow -- assumes as input, timenow, wifi-throughput,
     # amount of sent-bytes, boolean if Cellular subflow is enabled/disabled
-    def on_packet_received(self, time_now, r_wifi, sent_bytes, is_cell_on):
+    def on_packet_received(self, time_now, r_wifi, sent_bytes, is_cell_on, lte_throughput, lte_off):
 
         time_spent = time_now - self.star_time
         self.remaining_bytes = self.remaining_bytes - sent_bytes
+
+        if(self.remaining_bytes == 0):
+            ws = create_connection("ws://localhost:9001")
+            ws.send("lte_response:"+str(lte_throughput)+","+str(lte_off))
 
         if ((self.alfa * self.buffer_level - time_spent) * r_wifi) > (self.chunk_size - sent_bytes):
             if is_cell_on:
