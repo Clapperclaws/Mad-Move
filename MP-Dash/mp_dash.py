@@ -1,7 +1,8 @@
 from websocket import create_connection
 
 class mp_dash:
-    ''' MP-DASH is initialize with:
+
+    '''MP-DASH is initialize with:
       Start-time -- indicates the time the HTTP Request is sent
       Chunk-size -- indicates the size of the chunk in Bytes
       Bit-rate   -- indicates the chunk bitrate (quality)
@@ -33,16 +34,25 @@ class mp_dash:
             self.phi = 64 #80% of total buffer-capacity
             self.omega = 32 # Minimum set to be 40% of buffer-capacity
 
+        # MP-DASH function to enable/disable cellular sub-flow -- assumes as input, timenow, wifi-throughput,
+        # amount of sent-bytes, boolean if Cellular subflow is enabled/disabled
+        # This function return 0 to disable the cellular path and 1 to enable the cellular path
 
-    #MP-DASH function to enable/disable cellular sub-flow -- assumes as input, timenow, wifi-throughput,
-    # amount of sent-bytes, boolean if Cellular subflow is enabled/disabled
-    # This function return 0 to disable the cellular path and 1 to enable the cellular path
-    def on_packet_received(self, time_now, is_cell_on, r_wifi, lte_throughput, lte_off):
-        n = 0
-        #At every call of the on-packet received function -- pretend that a MSS is received.
-        if self.chunk_size - self.sent_bytes > self.packet_size:
-            n = self.packet_size
-        else:
+
+    '''
+    MP-DASH function to enable/disable cellular sub-flow -- assumes as input:
+     - timenow: Time when the packet is received
+     - packet_size: Size of the packet received in bytes
+     - r_wifi: wifi-throughput obtained from holt-winter estimator
+     - lte_throughput: historical lte_throughput measured when cellular-subflow is off during this chunk download
+     - lte_off: time when lte was turned off during this chunk download.
+    This function return 0 to disable the cellular path and 1 to enable the cellular path
+    '''
+
+    def on_packet_received(self, time_now, packet_size, r_wifi, lte_throughput, lte_off):
+        n = packet_size
+        # At every call of the on-packet received function -- pretend that a MSS is received.
+        if n > self.chunk_size - self.sent_bytes:
             n = self.chunk_size - self.sent_bytes
 
         # Update the total amount of bytes sent
@@ -51,7 +61,7 @@ class mp_dash:
         # Get time that elapses between HTTP Get and HTTP Response
         time_spent = time_now - self.start_time
 
-        #Get Current Buffer Level
+        # Get Current Buffer Level
 
         # start a connection to the server
         ws = create_connection("ws://localhost:9001")
@@ -63,26 +73,27 @@ class mp_dash:
         buffer_level = float(str.strip(result.split(':')[1]))
         ws.close()
 
-
-        #Adjust the deadline window
+        # Adjust the deadline window
         D = self.deadline_window
         if buffer_level > self.phi:
             D = buffer_level + (buffer_level - self.phi)
 
-        #If amount of remaining bytes is 0 -- last packet for this chunk
-        if(self.chunk_size - self.sent_bytes <= 0):
-            ws = create_connection("ws://localhost:9001")
-            #Send lte-info to the javascript -- lte_throughput and time lte is off (comma separated).
-            ws.send("lte_response:"+str(lte_throughput)+","+str(lte_off))
+        # If amount of remaining bytes is 0 -- last packet for this chunk
+        if (self.chunk_size - self.sent_bytes <= 0):
+            # Only send historical lte-throughput if cellular-subflow was de-activate during this chunk download
+            if lte_off > 0:
+                ws = create_connection("ws://localhost:9001")
+                # Send lte-info to the javascript -- lte_throughput and time lte is off (comma separated).
+                ws.send("lte_response:" + str(lte_throughput) + "," + str(lte_off))
 
-        #Disable MP-Dash if in critical condition
+        # Disable MP-Dash if in critical condition
         if buffer_level < self.omega:
-            return is_cell_on
+            return 1
 
         if ((self.alfa * D - time_spent) * r_wifi) > (self.chunk_size - self.sent_bytes):
             # if is_cell_on:
-                return 0 # Disable the cellular path
+            return 0  # Disable the cellular path
 
         if ((self.alfa * D - time_spent) * r_wifi) <= (self.chunk_size - self.sent_bytes):
             # if not is_cell_on:
-                return 1 # Enable the cellular path
+            return 1  # Enable the cellular path
