@@ -6,11 +6,11 @@ class mp_dash:
       Chunk-size -- indicates the size of the chunk in Bytes
       Bit-rate   -- indicates the chunk bitrate (quality)
       Alfa -- to compensate for estimation inaccuracy
-      Segment-size -- Video segment size in seconds ( as indicated by the Manifest file
+      Chunk-duration -- indicates the size of a chunk in seconds of video
       a boolean is-rate-based to distinguish between rate-based or duration-based Deadline estimation methods
       a boolean is-buffer-based to set the omega & phi according to the ABR algorithm
     '''
-    def __init__(self, start_time, chunk_size, bit_rate, alfa, segment_size, is_rate_based, is_buffer_based):
+    def __init__(self, start_time, chunk_size, bit_rate, alfa, chunk_duration, is_rate_based, is_buffer_based):
 
         self.chunk_size = chunk_size # Synonymous to S - video chunk size
         self.sent_bytes = 0 # Total amount of bytes sent so far
@@ -23,7 +23,7 @@ class mp_dash:
         if(is_rate_based):
             self.deadline_window = float(chunk_size * 8)/float(bit_rate)
         else:
-            self.deadline_window = segment_size
+            self.deadline_window = chunk_duration
 
         #set Omega & Phi based on ABR algorithm type
         if(is_buffer_based):
