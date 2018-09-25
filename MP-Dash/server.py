@@ -22,7 +22,7 @@ def new_client(client, server):
 
 
 def msg_received(client, server, msg):
-    last_lte_info = "some value"
+    last_lte_info = "lte_response:0,0"
     msg = "Client (%s) : %s" % (client['id'], msg)
     print (msg)
     if("buffer" in msg):
@@ -35,7 +35,7 @@ def msg_received(client, server, msg):
         clientid = client['id']
         server.send_message(clients[clientid], last_lte_info)
     if ("lte_response" in msg):
-        last_lte_info = msg.split(":")[1]
+        last_lte_info = msg
 
 
 server = WebsocketServer(9001)
