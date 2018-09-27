@@ -91,3 +91,20 @@ def double_exponential_smoothing(series, alpha, beta):
             estimate = 0
         result.append(estimate)
     return result
+
+def hw_estimation(series, last_level, last_trend, alpha, beta):
+
+    #Initialize level, trend, and estimate
+    level = -1
+    trend = -1
+    estimate = -1
+
+    #if first estimation -- set the first value of level and trend
+    if(len(series) == 2):
+        level, trend = series[0], series[1] - series[0]
+    else:
+        level = alpha * series[len(series)-1] + (1-alpha)*(last_trend+last_level)
+        trend = beta*(level - last_level) + (1- beta)*last_trend
+
+    estimate = level+trend
+    return estimate, level, trend
