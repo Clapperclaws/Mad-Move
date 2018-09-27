@@ -99,12 +99,15 @@ def hw_estimation(series, last_level, last_trend, alpha, beta):
     trend = -1
     estimate = -1
 
+    if(len(series) == 1):
+        return series[0], level, trend
     #if first estimation -- set the first value of level and trend
     if(len(series) == 2):
         level, trend = series[0], series[1] - series[0]
-    else:
-        level = alpha * series[len(series)-1] + (1-alpha)*(last_trend+last_level)
-        trend = beta*(level - last_level) + (1- beta)*last_trend
 
-    estimate = level+trend
+    value = series[len(series)-1]
+    last_level, level = level, alpha * value + (1 - alpha) * (level + trend)
+    trend = beta * (level - last_level) + (1 - beta) * trend
+
+    estimate = level + trend
     return estimate, level, trend
