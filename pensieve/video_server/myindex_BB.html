@@ -7,15 +7,17 @@
         <div>
             <video id="videoPlayer" controls="true"></video>
         </div>
-         <div id="log"></div>
+         <textarea id="log_lte"></textarea>
          <button id="fetch_lte_info" type="button" onclick="myFunction()">Get LTE Historical</button>
+          <div id="console" style="border: 1px dotted black;"></div>
 	<script src="dash.all.min.js"></script>
         <script>
             var player;
             var ws;
+            var lte_info;
     
             (function(){
-                var url = "http://35.180.63.62:8080/ftp-itec.uni-klu.ac.at/pub/datasets/DASHDataset2014/BigBuckBunny/4sec/BigBuckBunny_4s_onDemand_2014_05_09.mpd";
+                var url = "http://35.180.43.205:8080/ftp-itec.uni-klu.ac.at/pub/datasets/DASHDataset2014/BigBuckBunny/4sec/BigBuckBunny_4s_onDemand_2014_05_09.mpd";
                 player = dashjs.MediaPlayer().create()
 
                 var abr_algorithms = {0: 'Default', 1: 'Fixed Rate (0)', 2: 'Buffer Based', 3: 'Rate Based', 4: 'RL', 5: 'Festive', 6: 'Bola'};
@@ -67,6 +69,7 @@
                 }
                 if(e.data.includes("lte")){
                     output(e.data);
+                    update_info(e.data);
                 }
                 // onSubmit()
               };
@@ -85,8 +88,12 @@
               ws.close();
             }
 
+            function update_info(str) {
+              document.getElementById("log_lte").value = str.split(":")[1];
+            }
+
             function output(str) {
-              var log = document.getElementById("log");
+              var log = document.getElementById("console");
               var escaped = str.replace(/&/, "&amp;").replace(/</, "&lt;").
                 replace(/>/, "&gt;").replace(/"/, "&quot;"); // "
               log.innerHTML = escaped + "<br>" + log.innerHTML;

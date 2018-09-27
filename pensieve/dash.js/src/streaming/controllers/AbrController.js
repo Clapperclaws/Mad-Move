@@ -286,9 +286,9 @@ function AbrController() {
         // 5. return
         return bitrate;
     }
-
-    function predict_throughput(lastRequested, lastQuality, lastHTTPRequest) {
-        //Get LTE historical from webserver
+    // Modified by Sara A. to include in the compute lte_throughput and lte_offline time in the last throughput estimation
+    // last throughput = Chunk Size * 8 + Historical_LTE_Throughput*Time_LTE_is_Off / time_to_download_chunk
+    function predict_throughput(lastRequested, lastQuality, lastHTTPRequest, lte_throughput, lte_off) {
         var self = this,
         bandwidthEst = 0,
         lastDownloadTime,
@@ -305,7 +305,7 @@ function AbrController() {
             }
             lastChunkSize = last_chunk_size(lastHTTPRequest);
             //lastChunkSize = self.vbr.getChunkSize(lastRequested, lastQuality);
-            lastThroughput = lastChunkSize*8/lastDownloadTime/1000;
+            lastThroughput = (lastChunkSize*8 + lte_throughput*lte_off)/lastDownloadTime/1000;
             // Log last chunk
             pastThroughput[lastRequested] = lastThroughput;
             pastDownloadTime[lastRequested] = lastDownloadTime;
@@ -318,8 +318,8 @@ function AbrController() {
             tmpSum = 0;
             tmpDownloadTime = 0;
             for (var i = tmpIndex; i<= lastRequested; i++) {
-            tmpSum = tmpSum + pastDownloadTime[i]/pastThroughput[i];
-            tmpDownloadTime = tmpDownloadTime + pastDownloadTime[i];
+                tmpSum = tmpSum + pastDownloadTime[i]/pastThroughput[i];
+                tmpDownloadTime = tmpDownloadTime + pastDownloadTime[i];
             }
             bandwidthEst = tmpDownloadTime/tmpSum;
             bandwidthEstLog[lastRequested] = bandwidthEst;
@@ -500,12 +500,12 @@ function AbrController() {
         usePixelRatioInLimitBitrateByPortal = value;
     }
 
-    function nextChunkQuality(buffer, lastRequested, lastQuality, rebuffer) {
+    function nextChunkQuality(buffer, lastRequested, lastQuality, rebuffer, lte_throughput, lte_off) {
         const metrics = metricsModel.getReadOnlyMetricsFor('video');
         //console.log("ORIG THROUGH: " + getAverageThroughput("video"));
         //var lastHTTPRequest = dashMetrics.getHttpRequests(metricsModel.getReadOnlyMetricsFor('video'))[lastRequested];
         var lastHTTPRequest = dashMetrics.getCurrentHttpRequest(metrics);
-        var bandwidthEst = predict_throughput(lastRequested, lastQuality, lastHTTPRequest);
+        var bandwidthEst = predict_throughput(lastRequested, lastQuality, lastHTTPRequest, lte_throughput, lte_off);
         switch(abrAlgo) {
             case 2:
                 var xhr = new XMLHttpRequest();
@@ -601,7 +601,7 @@ function AbrController() {
         }
     }
 
-    function getPlaybackQuality(streamProcessor, completedCallback, buffer=0, rebuffer=0) {
+    function getPlaybackQuality(streamProcessor, completedCallback, buffer=0, rebuffer=0, lte_throughput, lte_off) {
         const type = streamProcessor.getType();
         const streamInfo = streamProcessor.getStreamInfo();
         const streamId = streamInfo.id;
@@ -640,7 +640,7 @@ function AbrController() {
                 if ( abrAlgo == 0 ) { // use the default return value
                     const metrics = metricsModel.getReadOnlyMetricsFor('video');
                     var lastHTTPRequest = dashMetrics.getCurrentHttpRequest(metrics);
-                    var bandwidthEst = predict_throughput(lastRequested, lastQuality, lastHTTPRequest);
+                    var bandwidthEst = predict_throughput(lastRequested, lastQuality, lastHTTPRequest, lte_throughput, lte_off);
                     // defaults to lowest quality always
                     var xhr = new XMLHttpRequest();
                     xhr.open("POST", "http://localhost:8333", false);
@@ -657,7 +657,7 @@ function AbrController() {
                     xhr.send(JSON.stringify(data));
                     return Math.max(currentValue, newValue);
                 }
-                lastQuality = nextChunkQuality(buffer, lastRequested, lastQuality, rebuffer);
+                lastQuality = nextChunkQuality(buffer, lastRequested, lastQuality, rebuffer, lte_throughput, lte_off);
                 lastRequested = lastRequested + 1;
                 if ( abrAlgo == 6 ) {
                     lastQuality = Math.max(currentValue, newValue);
