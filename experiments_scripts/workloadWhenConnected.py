@@ -11,6 +11,7 @@ from time import sleep
 
 
 def run_command(command):
+    print "COMMAND " + str(command)
     p = subprocess.Popen(command,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT)
@@ -60,7 +61,17 @@ signal.signal(signal.SIGINT, sigterm_handler)
 monitor_command = 'ip -ts monitor label dev wlo1'.split()  #todo by specifying "route" we limit the useless messages (at the moment better to keep everything, just in case)
 
 #monitor_command = 'ls'.split()
-workload_command = 'wget -c http://35.180.29.11:8080/download/ubuntu.iso'.split()
+#workload_command = 'wget -c http://35.180.114.57:8080/download/ubuntu.iso'.split()
+
+workload_command = 'google-chrome --incognito --user-data-dir=/tmp/chrome-profile --no-proxy-server --enable-quic --origin-to-force-quic-on=www.example.org:443'.split()
+workload_command.append('--host-resolver-rules=MAP www.example.org:443 35.180.114.57:6121')
+workload_command.append('https://www.example.org/bigfile.txt') #.split()
+
+
+
+
+#workload_command = 'wget -c http://releases.ubuntu.com/18.04.1/ubuntu-18.04.1-desktop-amd64.iso?_ga=2.121902795.1377299371.1533299868-476592716.1533299868'.split()
+
 ping_command = 'ping -i 0.2 8.8.8.8 -D'
 
 

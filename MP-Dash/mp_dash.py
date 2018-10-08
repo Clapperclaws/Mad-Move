@@ -18,27 +18,49 @@ class mp_dash:
         self.start_time = start_time # Time when HTTP Get request is sent
         self.alfa = alfa # Alfa is used to compensate the estimation inaccuracy of Wifi Throughput
         self.mode = is_rate_based # This mode indicates if the deadline is set as rate-based or duration-based
-        self.packet_size = 1500
-
-        #set the deadline
+        #self.packet_size = 1500
+	
+	#set the deadline
         if(is_rate_based):
             self.deadline_window = float(chunk_size * 8)/float(bit_rate)
         else:
             self.deadline_window = chunk_duration
 
-        #set Omega & Phi based on ABR algorithm type
+	#set Omega & Phi based on ABR algorithm type
         if(is_buffer_based):
-            self.phi = 76 #Total buffer capacity (80) - segment-size (4)
-            self.omega = 9 #Buffer-length that maps to the lowest bitrate (reservoir = 5 sec) + segment-size
+            self.phi = 56 #Total buffer capacity (60) - segment-size (4)
+            self.omega = 12 #Buffer-length that maps to the lowest bitrate (reservoir = 5 sec) + segment-size
         else:
-            self.phi = 64 #80% of total buffer-capacity
+            self.phi = 48 #80% of total buffer-capacity
             self.omega = 32 # Minimum set to be 40% of buffer-capacity
+	
+	#Start a connection to the websocket server
+	self.ws = create_connection("ws://localhost:9001")
 
-        # MP-DASH function to enable/disable cellular sub-flow -- assumes as input, timenow, wifi-throughput,
-        # amount of sent-bytes, boolean if Cellular subflow is enabled/disabled
-        # This function return 0 to disable the cellular path and 1 to enable the cellular path
+	# Request Buffer Level from DASH Client
+        self.ws.send("buffer_request")
+	print "Asking for buffer level"
+        # Read Reply from Server
+        result = self.ws.recv()
+	print result
+        # This stripping & trimming is to handle the javascript output function -- could be modified
+        self.buffer_level = float(str.strip(result.split(':')[2]))
+	print "Buffer level",self.buffer_level
+        
+        # Adjust the deadline window
+        self.D = self.deadline_window
+        if self.buffer_level > self.phi:
+            self.D =self.buffer_level + (self.buffer_level - self.phi)
 
 
+    #This function closes the websocket
+    def close_websocket(self):
+	self.ws.close()    
+    
+    # MP-DASH function to enable/disable cellular sub-flow -- assumes as input, timenow, wifi-throughput,
+    # amount of sent-bytes, boolean if Cellular subflow is enabled/disabled
+    # This function return 0 to disable the cellular path and 1 to enable the cellular path
+	
     '''
     MP-DASH function to enable/disable cellular sub-flow -- assumes as input:
      - timenow: Time when the packet is received
@@ -50,6 +72,7 @@ class mp_dash:
     '''
 
     def on_packet_received(self, time_now, packet_size, r_wifi, lte_throughput, lte_off):
+	print "on_packet_received " + str(self) + " " + str(packet_size) + " " + str(self.sent_bytes) + " r_wifi: " + repr(r_wifi)
         n = packet_size
         # At every call of the on-packet received function -- pretend that a MSS is received.
         if n > self.chunk_size - self.sent_bytes:
@@ -64,36 +87,31 @@ class mp_dash:
         # Get Current Buffer Level
 
         # start a connection to the server
-        ws = create_connection("ws://localhost:9001")
-        # Request Buffer Level from Javascript
-        ws.send("Buffer_Level")
-        # Read Reply from Server
-        result = ws.recv()
-        # This stripping & trimming is to handle the javascript output function -- could be modified
-        buffer_level = float(str.strip(result.split(':')[1]))
-        ws.close()
-
-        # Adjust the deadline window
-        D = self.deadline_window
-        if buffer_level > self.phi:
-            D = buffer_level + (buffer_level - self.phi)
+        #ws = create_connection("ws://localhost:9001")
 
         # If amount of remaining bytes is 0 -- last packet for this chunk
         if (self.chunk_size - self.sent_bytes <= 0):
             # Only send historical lte-throughput if cellular-subflow was de-activate during this chunk download
             if lte_off > 0:
-                ws = create_connection("ws://localhost:9001")
+                #ws = create_connection("ws://localhost:9001")
                 # Send lte-info to the javascript -- lte_throughput and time lte is off (comma separated).
-                ws.send("lte_response:" + str(lte_throughput) + "," + str(lte_off))
+                self.ws.send("lte_response:" + str(lte_throughput) + "," + str(lte_off))
+	    #self.ws.close()
 
         # Disable MP-Dash if in critical condition
-        if buffer_level < self.omega:
+        if (self.buffer_level - time_spent) < self.omega:
             return 1
+	
+	remaining_bytes = self.chunk_size - self.sent_bytes
+	if remaining_bytes <= 0:
+	    remaining_bytes = 1500
+	    print "OVERHEAD!!!!!!!!!!!! " + str(self)
 
-        if ((self.alfa * D - time_spent) * r_wifi) > (self.chunk_size - self.sent_bytes):
+	print "remaining_bytes: " + repr(remaining_bytes) +  " r_wifi: " + repr(r_wifi) + " deadline: "+str(self.D) + " formula: " + repr(self.alfa * self.D - time_spent)
+        if ((self.alfa * self.D - time_spent) * r_wifi) > remaining_bytes:
             # if is_cell_on:
             return 0  # Disable the cellular path
 
-        if ((self.alfa * D - time_spent) * r_wifi) <= (self.chunk_size - self.sent_bytes):
+        if ((self.alfa * self.D - time_spent) * r_wifi) <= remaining_bytes:
             # if not is_cell_on:
             return 1  # Enable the cellular path

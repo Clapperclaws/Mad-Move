@@ -8,3 +8,14 @@ tshark -r monitor.pcap -Y 'wlan.da == 64:80:99:8c:61:a8 && wlan.fc.type == 2' -T
 tshark -r monitor.pcap -Y 'wlan.da == 64:80:99:8c:61:a8 && wlan.fc.type == 2' -Tfields -t e -e _ws.col.Time -e wlan.seq
 
 
+
+
+## LIVE MONITORING ##
+  python ../experiments_scripts/networkConditionLive.py wlo1 192.168.243.128 wlo1
+  python ../experiments_scripts/networkConditionLive.py ../../../MPTCP_test/in_lab/1535013679/lte_1535013679.pcap 192.168.42.177 wlo1 -F
+
+
+sudo tshark -i enp0s20u3u2 -Y 'ip.src == ??? && tcp.options.mptcp.dataackpresent.flag == 1' -Tfields -e _ws.col.Time -e tcp.options.mptcp.rawdataack | awk 'BEGIN{previous=0; cc=0}{if (previous==$2) {cc=cc+1; } else{cc=0;} if (cc>3) {system("echo do something");} previous=$2}'  
+
+do something: # sudo ip link set dev wlo1 multipath off   on/off
+

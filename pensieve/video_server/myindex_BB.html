@@ -17,7 +17,8 @@
             var lte_info;
     
             (function(){
-                var url = "http://35.180.43.205:8080/ftp-itec.uni-klu.ac.at/pub/datasets/DASHDataset2014/BigBuckBunny/4sec/BigBuckBunny_4s_onDemand_2014_05_09.mpd";
+                //var url = "http://52.47.182.139:8080/ftp-itec.uni-klu.ac.at/pub/datasets/DASHDataset2014/BigBuckBunny/2sec/BigBuckBunny_2s_onDemand_2014_05_09.mpd";
+                var url = "http://52.47.182.139:8080/ftp-itec.uni-klu.ac.at/pub/datasets/DASHDataset2014/BigBuckBunny/4sec/BigBuckBunny_4s_onDemand_1500kbps.mpd";
                 player = dashjs.MediaPlayer().create()
 
                 var abr_algorithms = {0: 'Default', 1: 'Fixed Rate (0)', 2: 'Buffer Based', 3: 'Rate Based', 4: 'RL', 5: 'Festive', 6: 'Bola'};
@@ -64,10 +65,11 @@
               ws.onmessage = function(e) {
                 // e.data contains received string.
                 output("onmessage: " + e.data);
-                if(e.data.includes("buffer")){
-                    ws.send(player.getBufferLength('video'));
+                if(e.data.includes("buffer_request")){
+		    output("Received a buffer request");
+                    ws.send("buffer_reply:"+player.getBufferLength('video'));
                 }
-                if(e.data.includes("lte")){
+                if(e.data.includes("lte_response")){
                     output(e.data);
                     update_info(e.data);
                 }

@@ -5,28 +5,28 @@ sudo pkill carfi-roamingd
 
 
 
+mv in_progress/1* "test_dir"
 
 
 timestamp=$(date +"%s")
 
 #create directory with current timestamp
-mkdir ${timestamp}
+mkdir "in_progress/"${timestamp}
 
 #sudo tcpdump -i wlo1 > ${timestamp}/wifi_${timestamp}.txt &
-sudo tcpdump -i wlo1 -w ${timestamp}/wifi_${timestamp}.pcap &
+sudo tcpdump -i wlo1 --buffer-size=50000 -w "in_progress/"${timestamp}/wifi_${timestamp}.pcap &
 
 
 
 #sudo ~/Desktop/carfi/carfi-supplicant -i wlo1 -d -c /etc/wpa_supplicant/madmove.conf -t > ${timestamp}/wpa_supplicant_${timestamp}.log &
 
-sudo ~/Desktop/carfi/carfi-supplicant -Dnl80211 -i wlo1 -c /etc/wpa_supplicant/madmove.conf -dt > ${timestamp}/wpa_supplicant_${timestamp}.log &
+sudo ~/Desktop/carfi/carfi-supplicant -Dnl80211 -i wlo1 -c /etc/wpa_supplicant/madmove.conf -dt > "in_progress/"${timestamp}/wpa_supplicant_${timestamp}.log &
 
 #workload
-python workloadWhenConnected.py ${timestamp} > ${timestamp}/workload_monitor_${timestamp}.txt &
-
+python workloadWhenConnected.py "in_progress/"${timestamp} >> "in_progress/"${timestamp}/workload_monitor_${timestamp}.txt 2>&1 &
 
 #sudo ~/Desktop/carfi/carfi-roamingd wlo1 > ${timestamp}/wpa_supplicant_${timestamp}.log & 
-sudo ~/Desktop/carfi/carfi-roamingd wlo1  |& ts '%.s:' |& tee  ${timestamp}/roamingd_${timestamp}.log 
+sudo ~/Desktop/carfi/carfi-roamingd wlo1  |& ts '%.s:' |& tee  "in_progress/"${timestamp}/roamingd_${timestamp}.log 
 
 
 

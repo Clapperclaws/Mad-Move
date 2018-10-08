@@ -16,6 +16,15 @@ DHCP4_NETWORK_NUMBER="192.168.243.0"  #default.. Free the first time doesn't tel
 DHCP4_ROUTERS=""
 CLEANED = False
 
+IsInLab = False
+
+####wifi in lab
+#DHCP4_IP_ADDRESS=""
+#IP4_ADDRESS_0=""			
+#DHCP4_NETWORK_NUMBER="192.168.243.0"  #default.. Free the first time doesn't tell us anything about it
+#DHCP4_ROUTERS=""
+#CLEANED = False
+
 def run_command(command):
     print "Running command " + str(command)
     p = subprocess.Popen(command,
@@ -56,14 +65,21 @@ def has_new_address(minotorOutput):
     global DHCP4_NETWORK_NUMBER
     global DHCP4_ROUTERS
     global CLEANED
+    global IsInLab
     if minotorOutput.find("ADDR")!=-1:
         if minotorOutput.find("scope") !=-1 and minotorOutput.find("global")!=-1 and minotorOutput.find("Deleted")==-1:
 	    full_ip = minotorOutput.split()[4]
+	    if full_ip.find("inet")!=-1:
+	        full_ip = minotorOutput.split()[5]
 	    DHCP4_IP_ADDRESS = full_ip.split('/')[0]
 	    IP4_ADDRESS_0=full_ip
 	    print "Setting DHCP4_IP_ADDRESS " + str(DHCP4_IP_ADDRESS) + " IP4_ADDRESS_0 " + IP4_ADDRESS_0
 	    CLEANED = False
-	    return checkIfComplete()
+	    return IsInLab or checkIfComplete()
+
+#[2018-09-12T16:16:33.311015] [ADDR]3: wlo1    inet 192.168.1.228/24 brd 192.168.1.255 scope global dynamic wlo1
+
+
     elif minotorOutput.find("ROUTE")!=-1:
 	if minotorOutput.find("proto dhcp scope link") !=-1:
     	    DHCP4_ROUTERS = minotorOutput.split()[1].split(']')[1]
@@ -71,14 +87,14 @@ def has_new_address(minotorOutput):
 	    IP4_ADDRESS_0 += DHCP4_ROUTERS ##todo check if it is always true
 	    print "setting DHCP4_ROUTERS " + DHCP4_ROUTERS + " IP4_ADDRESS_0 " + IP4_ADDRESS_0
 	    CLEANED = False
-	    return checkIfComplete()
+	    return IsInLab or checkIfComplete()
 	elif minotorOutput.find("broadcast") !=-1:	
  	    ip = minotorOutput.split()[2]
 	    if ip.find('.0')!=-1:
   	        DHCP4_NETWORK_NUMBER=ip
 	        print "Setting DHCP4_NETWORK_NUMBER " + DHCP4_NETWORK_NUMBER 
     	        CLEANED = False
-		return checkIfComplete()
+	    	return IsInLab or checkIfComplete()
 
 #2018-08-06T15:09:56.677990] [ADDR]3: wlo1    inet 192.168.243.128/24 brd 192.168.243.255 scope global dynamic wlo1
 #       valid_lft 7200sec preferred_lft 7200sec
@@ -120,8 +136,8 @@ def did_lose_address(minotorOutput):
 def sigterm_handler(_signo, _stack_frame):
     # Raises SystemExit(0):
     print "killing everything"
-    if ping_process != None:
-        ping_process.kill()
+    #if ping_process != None:
+    #   ping_process.kill()
     if workload_process != None:
         workload_process.kill()
     monitor_process.kill()
@@ -141,6 +157,7 @@ monitor_command = 'ip -ts monitor label dev wlo1'.split()  #todo by specifying "
 
 monitor_process = run_command(monitor_command)
 
+clearInfo()
 
 for line in iter(monitor_process.stdout.readline, b''):
     print(line)
@@ -148,7 +165,10 @@ for line in iter(monitor_process.stdout.readline, b''):
 #    monitor_process.kill()
     if has_new_address(line)==True:
         print("MAD-MOVE: new address " + "DHCP4_IP_ADDRESS " + DHCP4_IP_ADDRESS + " IP4_ADDRESS_0 " + IP4_ADDRESS_0 + " DHCP4_NETWORK_NUMBER " + DHCP4_NETWORK_NUMBER + " DHCP4_ROUTERS " + DHCP4_ROUTERS + " " + line)	
-	run_command(("sudo /home/ubuntu/Desktop/mptcp_up " + DHCP4_IP_ADDRESS + " \"" + IP4_ADDRESS_0 + "\" " + DHCP4_NETWORK_NUMBER + " " + DHCP4_ROUTERS).split() )
+	if IsInLab == True:	
+    	    run_command(("sudo /home/ubuntu/Desktop/mptcp_up ").split() )
+	else:
+            run_command(("sudo /home/ubuntu/Desktop/mptcp_up " + DHCP4_IP_ADDRESS + " \"" + IP4_ADDRESS_0 + "\" " + DHCP4_NETWORK_NUMBER + " " + DHCP4_ROUTERS).split() )
         sys.stdout.flush()
     elif did_lose_address(line) == True:
         print("MAD-MOVE: lost address " + line)

@@ -25,14 +25,25 @@ def msg_received(client, server, msg):
     last_lte_info = "lte_response:0,0"
     msg = "Client (%s) : %s" % (client['id'], msg)
     print (msg)
-    if("buffer" in msg):
+    if("buffer_request" in msg):
+	print "Asking for buffer"
         clientid = client['id']
         for cl in clients:
             if cl != clientid:
                 cl = clients[cl]
-                server.send_message(cl, msg)
+            	server.send_message(cl, msg)
+    if("buffer_reply" in msg):
+	print "Forwading buffer level"
+        clientid = client['id']
+	print clientid
+        for cl in clients:
+            if cl != clientid:
+		print "MEssage sent to client",cl
+                cl = clients[cl]
+            	server.send_message(cl, msg)
     if("lte_request" in msg):
         clientid = client['id']
+	print clientid
         server.send_message(clients[clientid], last_lte_info)
     if ("lte_response" in msg):
         last_lte_info = msg

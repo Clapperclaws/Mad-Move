@@ -67,11 +67,11 @@ def make_request_handler(input_dict):
                 self.input_dict['last_total_rebuf'] = post_data['RebufferTime']
                 self.input_dict['last_bit_rate'] = VIDEO_BIT_RATE[post_data['lastquality']]
 
-                if (post_data['lastRequest'] == TOTAL_VIDEO_CHUNKS ):
-                    send_data = "REFRESH"
-                    self.input_dict['last_total_rebuf'] = 0
-                    self.input_dict['last_bit_rate'] = DEFAULT_QUALITY
-                    self.log_file.write('\n')  # so that in the log we know where video ends
+                #if (post_data['lastRequest'] == TOTAL_VIDEO_CHUNKS ):
+                #    send_data = "REFRESH"
+                 #   self.input_dict['last_total_rebuf'] = 0
+                 #   self.input_dict['last_bit_rate'] = DEFAULT_QUALITY
+                 #   self.log_file.write('\n')  # so that in the log we know where video ends
 
             self.send_response(200)
             self.send_header('Content-Type', 'text/plain')

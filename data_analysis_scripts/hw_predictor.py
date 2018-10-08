@@ -1,5 +1,5 @@
-import pandas as pd
-import matplotlib.pyplot as plt
+#import pandas as pd
+#import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -86,6 +86,8 @@ def double_exponential_smoothing(series, alpha, beta):
             value = series[n]
         last_level, level = level, alpha*value + (1-alpha)*(level+trend)
         trend = beta*(level-last_level) + (1-beta)*trend
+	#print "level", level
+	#print "trend", trend
         estimate = level + trend
         if (estimate < 0):
             estimate = 0
@@ -93,21 +95,30 @@ def double_exponential_smoothing(series, alpha, beta):
     return result
 
 def hw_estimation(series, last_level, last_trend, alpha, beta):
-
+    #print 'level',last_level
+    #print 'trend',last_trend
+    #print 'series',series
     #Initialize level, trend, and estimate
-    level = -1
-    trend = -1
-    estimate = -1
+    #level = 0
+    #trend = 0
+    #estimate = -1
 
     if(len(series) == 1):
-        return series[0], level, trend
+        return series[0], 0, 0
     #if first estimation -- set the first value of level and trend
     if(len(series) == 2):
         level, trend = series[0], series[1] - series[0]
+    else:
+	    value = series[len(series)-1]
+	    level = alpha * value + (1 - alpha) * (last_level + last_trend)
+	    trend = beta * (level - last_level) + (1 - beta) * last_trend
 
-    value = series[len(series)-1]
-    last_level, level = level, alpha * value + (1 - alpha) * (level + trend)
-    trend = beta * (level - last_level) + (1 - beta) * trend
+    #last_level, level = level, alpha * value + (1 - alpha) * (level + trend)
+    #trend = beta * (level - last_level) + (1 - beta) * trend
 
     estimate = level + trend
+
+    if (estimate < 0):
+    	estimate = 0
     return estimate, level, trend
+
